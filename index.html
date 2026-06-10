@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bela Blok</title>
+<style>
+:root {
+    --felt:       #1b4a30;
+    --felt-dark:  #122e1e;
+    --card:       #f7f3ec;
+    --card-bg:    #ffffff;
+    --border:     #e2dbd0;
+    --text:       #1a1a28;
+    --muted:      #8a8a9a;
+    --red:        #b83232;
+    --gold:       #c8923a;
+    --green:      #1e8c4e;
+    --green-light: #e8f5ee; /* Added for drag-over feedback */
+    --navy:       #1e2a3a;
+    --shadow:     rgba(0,0,0,0.22);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--felt);
+    background-image:
+        radial-gradient(ellipse at 15% 20%, rgba(255,255,255,0.04) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 80%, rgba(0,0,0,0.12) 0%, transparent 55%);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px 40px;
+}
+
+.screen { display: none; width: 100%; max-width: 440px; animation: fadeIn .2s ease; }
+.screen.active { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── Shared ─── */
+.card {
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: 0 10px 36px var(--shadow), 0 2px 8px rgba(0,0,0,0.1);
+    padding: 28px 24px 24px;
+    position: relative;
+}
+
+.wordmark {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 14px;
+}
+
+.card-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.card-sub {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.btn-game-nav {
+    background: transparent;
+    color: rgba(255,255,255,0.7); /* Lighter color for dark background */
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 0.15s;
+    padding: 0; /* Remove default button padding */
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-game-nav:hover { color: rgba(255,255,255,1); }
+
+
+.game-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-end-game {
+    width: 100%;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-end-game:hover { background: #d04040; }
+
+.lang-switcher {
+    display: flex; gap: 6px;
+}
+.lang-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 11px;
+    transition: all 0.2s;
+}
+.lang-btn.active { background: var(--gold); border-color: var(--gold); font-weight: bold; }
+
+/* ─── Screen 1 – Player count ─── */
+.player-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.player-btn {
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 8px 18px;
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.player-btn:hover, .player-btn:active {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+}
+
+.player-btn .suit { font-size: 26px; margin-bottom: 6px; display: block; }
+.player-btn .num  { font-size: 38px; font-weight: 900; color: var(--text); line-height: 1; }
+.player-btn .lbl  { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+/* ─── Screen 2 – Names ─── */
+.names-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+
+.name-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.name-avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+
+.avatar-r { background: #fde8e8; }
+.avatar-b { background: #e8eef8; }
+.avatar-g { background: #e8f5ee; }
+
+.name-input {
+    flex: 1;
+    padding: 13px 14px;
+    font-size: 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    outline: none;
+    transition: border-color .15s;
+    color: var(--text);
+}
+
+.name-input:focus { border-color: var(--gold); }
+
+/* ─── Screen 3 – Target ─── */
+.target-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.target-btn {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text);
+    text-align: center;
+    transition: all .15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.target-btn:hover, .target-btn:active {
+    border-color: var(--gold);
+    transform: translateY(-1px);
+}
+
+.target-btn.custom-btn {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.custom-wrap { margin-top: 12px; display: none; }
+.custom-wrap.show { display: block; }
+
+.custom-input {
+    width: 100%;
+    padding: 14px;
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    outline: none;
+    background: white;
+    color: var(--text);
+    transition: border-color .15s;
+    margin-bottom: 10px;
+}
+
+.custom-input:focus { border-color: var(--gold); }
+
+/* ─── Primary btn ─── */
+.btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary:hover { background: #2c3f55; }
+
+/* ─── GAME SCREEN ─── */
+#screen-game { max-width: 460px; }
+
+.topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+    padding: 0 4px;
+    min-height: 32px;
+}
+
+.topbar-side {
+    width: 85px; display: flex; align-items: center;
+}
+.topbar-side.right { justify-content: flex-end; }
+
+.topbar-wordmark {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+}
+
+.target-pill {
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.75);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.18);
+}
+
+/* Scoreboard */
+.scoreboard {
+    background: var(--card);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 10px 32px var(--shadow);
+    margin-bottom: 14px;
+}
+
+.sb-header {
+    display: grid;
+    background: var(--navy);
+    color: white;
+}
+
+.sb-cell-head {
+    padding: 13px 10px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sb-totals { display: grid; }
+
+.sb-cell-total {
+    padding: 22px 10px;
+    text-align: center;
+    font-size: 46px;
+    font-weight: 900;
+    color: var(--text);
+    border-right: 1px solid var(--border);
+    transition: color .3s;
+    line-height: 1;
+}
+
+.sb-cell-total:last-child { border-right: none; }
+.sb-cell-total.winning { color: var(--green); }
+.sb-cell-total.losing  { color: var(--red);   }
+
+.sb-bars {
+    display: grid;
+    padding: 0 14px 14px;
+    gap: 8px;
+}
+
+.bar-track {
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--gold);
+    transition: width .45s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+}
+
+/* Input card */
+.input-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 8px 28px var(--shadow);
+    margin-bottom: 14px;
+}
+
+/* Caller section */
+.caller-section {
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+}
+
+.caller-row {
+    display: grid;
+    gap: 10px;
+}
+.caller-row.col2 { grid-template-columns: 1fr 1fr; }
+.caller-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.caller-btn {
+    padding: 10px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.caller-btn.disabled {
+    background: #f0ece1; /* Lighter background for disabled */
+    color: var(--muted); /* Muted text color for disabled */
+    cursor: not-allowed;
+    opacity: 0.7;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.caller-btn.active {
+    border-color: var(--gold);
+    background: var(--gold);
+    color: white;
+}
+
+/* Inputs section */
+.input-section { margin-bottom: 14px; }
+
+.inputs-row {
+    display: grid;
+    gap: 10px;
+    align-items: end;
+}
+
+.inputs-row.col2 { grid-template-columns: 1fr 1fr; }
+.inputs-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.input-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.score-input {
+    width: 100%;
+    padding: 14px 8px;
+    font-size: 24px;
+    font-weight: 800;
+    text-align: center;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    outline: none;
+    transition: border-color .15s;
+    color: var(--text);
+    -moz-appearance: textfield;
+}
+
+.score-input:focus { border-color: var(--gold); }
+.score-input[readonly] { background: #f3f0ea; color: var(--muted); cursor: default; }
+.score-input::-webkit-outer-spin-button,
+.score-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+.arrow-div {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 16px;
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1;
+}
+
+/* Zvanja section */
+.zvanja-section { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 0; }
+
+.zvanja-header {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.zvanja-row {
+    display: grid;
+    gap: 10px;
+}
+.zvanja-row.col2 { grid-template-columns: 1fr 1fr; }
+.zvanja-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.z-col {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+}
+
+.z-val {
+    font-size: 20px;
+    font-weight: 800;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.z-btn-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+}
+
+.z-btn {
+    background: #f0ece1;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--navy);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.z-btn:active { background: #e2dbd0; }
+.z-btn.z-stiglja { background: #e6e0d2; font-size: 10px; }
+.z-btn.z-clear { background: #ffebeb; color: var(--red); grid-column: span 3; margin-top: 2px; padding: 4px 0;}
+
+/* Action buttons */
+.action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.btn-add {
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-add:hover { background: #22a35a; }
+
+.btn-undo {
+    background: white;
+    color: var(--muted);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-undo:hover { border-color: var(--red); color: var(--red); }
+
+/* History */
+.history-wrap {
+    background: var(--card);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px var(--shadow);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.hist-row {
+    display: grid;
+    padding: 11px 16px;
+    border-bottom: 1px solid #eeebe3;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--muted);
+    align-items: center;
+}
+.hist-row:last-child { border-bottom: none; }
+.hist-row.col2 { grid-template-columns: 1fr 1fr; }
+.hist-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+.hist-cell { text-align: center; }
+.hist-pad { color: var(--red); font-size: 12px; display: block; font-weight: 700; text-transform: uppercase; }
+
+.btn-reset {
+    width: 100%;
+    background: transparent;
+    color: rgba(255,255,255,0.38);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-reset:hover { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.35); }
+
+/* Win modal */
+.win-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,20,12,0.75);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(3px);
+}
+.win-overlay.show { display: flex; animation: fadeIn .25s ease; }
+
+/* Custom Confirm Overlay */
+.overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,20,12,0.75);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(3px);
+}
+.overlay.show { display: flex; animation: fadeIn .2s ease; }
+
+.modal-card {
+    background: var(--card);
+    border-radius: 22px;
+    padding: 30px 24px;
+    text-align: center;
+    max-width: 320px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.modal-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+.modal-message {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 24px;
+}
+.modal-actions { display: flex; gap: 10px; }
+
+.win-card {
+    background: var(--card);
+    border-radius: 22px;
+    padding: 44px 32px 36px;
+    text-align: center;
+    max-width: 320px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+.win-suit   { font-size: 72px; margin-bottom: 12px; display: block; }
+.win-lbl    { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.win-name   { font-size: 38px; font-weight: 900; color: var(--text); margin-bottom: 6px; }
+.win-score  { font-size: 18px; color: var(--gold); font-weight: 700; margin-bottom: 30px; }
+
+.btn-new-game {
+    width: 100%;
+    padding: 16px;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 13px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+}
+.btn-new-game:hover { background: #2c3f55; }
+
+/* Scrollbar */
+.history-wrap::-webkit-scrollbar { width: 4px; }
+.history-wrap::-webkit-scrollbar-track { background: transparent; }
+.history-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ─── Screen 1: Player count ─── -->
+<div class="screen active" id="screen-players">
+    <div class="topbar">
+        <div class="topbar-side">
+            <div class="lang-switcher">
+                <button class="lang-btn active" onclick="setLanguage('hr')">HR</button>
+                <button class="lang-btn" onclick="setLanguage('en')">EN</button>
+            </div>
+        </div>
+        <div class="topbar-wordmark">♠ Bela Blok ♠</div>
+        <div class="topbar-side right"></div>
+    </div>
+    <div class="card">
+        <div class="card-title">Koliko igrača?</div>
+        <div class="card-sub">Odaberi format igre</div>
+        <div class="player-grid">
+            <button class="player-btn" onclick="selectPlayers(2)">
+                <span class="suit">♦</span>
+                <div class="num">2</div>
+                <div class="lbl">1 na 1</div>
+            </button>
+            <button class="player-btn" onclick="selectPlayers(3)">
+                <span class="suit">♥</span>
+                <div class="num">3</div>
+                <div class="lbl">Troje</div>
+            </button>
+            <button class="player-btn" onclick="selectPlayers(4)">
+                <span class="suit">♠</span>
+                <div class="num">4</div>
+                <div class="lbl">Parovi</div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Screen 2: Names ─── -->
+<div class="screen" id="screen-names">
+    <div class="topbar">
+        <div class="topbar-side"><button class="btn-game-nav" onclick="goBack('screen-players')">← Natrag</button></div>
+        <div class="topbar-wordmark">♠ Bela Blok ♠</div>
+        <div class="topbar-side right"></div>
+    </div>
+    <div class="card">
+        <div class="card-title">Imena igrača</div>
+        <div class="card-sub">Možeš promijeniti zadane nazive</div>
+        <div class="names-grid" id="names-grid"></div>
+        <button class="btn-primary" onclick="goToTarget()">Nastavi →</button>
+    </div>
+</div>
+
+<!-- ─── Screen: Order Players (3 players only) ─── -->
+<div class="screen" id="screen-order">
+    <div class="topbar">
+        <div class="topbar-side"><button class="btn-game-nav" onclick="goBack('screen-names')">← Natrag</button></div>
+        <div class="topbar-wordmark">♠ Bela Blok ♠</div>
+        <div class="topbar-side right"></div>
+    </div>
+    <div class="card">
+        <div class="card-title" id="order-title">Poredaj igrače</div>
+        <div class="card-sub" id="order-sub">Prvi igrač na redu zove</div>
+        <div class="names-grid" id="order-list"></div>
+        <button class="btn-primary" onclick="confirmOrder()">Nastavi →</button>
+    </div>
+</div>
+
+<!-- ─── Screen 3: Target score ─── -->
+<div class="screen" id="screen-target">
+    <div class="topbar">
+        <div class="topbar-side"><button class="btn-game-nav" onclick="goBack('screen-names')">← Natrag</button></div>
+        <div class="topbar-wordmark">♠ Bela Blok ♠</div>
+        <div class="topbar-side right"></div>
+    </div>
+    <div class="card">
+        <div class="card-title">Do koliko se igra?</div>
+        <div class="card-sub">Igra završava kad netko dosegne cilj</div>
+        <div class="target-grid">
+            <button class="target-btn" onclick="selectTarget(501)">501</button>
+            <button class="target-btn" onclick="selectTarget(701)">701</button>
+            <button class="target-btn" onclick="selectTarget(1001)">1001</button>
+            <button class="target-btn custom-btn" onclick="showCustomTarget()">✏️ Unesi broj</button>
+        </div>
+        <div class="custom-wrap" id="custom-wrap">
+            <input type="number" class="custom-input" id="custom-input" placeholder="npr. 301" min="100">
+            <button class="btn-primary" style="margin-top:0" onclick="confirmCustom()">Potvrdi →</button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Screen 4: Game ─── -->
+<div class="screen" id="screen-game">
+    <div class="topbar">
+        <div class="topbar-side"><button class="btn-game-nav" onclick="confirmGoBackFromGame()">← Natrag</button></div>
+        <div class="topbar-wordmark">♠ Bela Blok ♠</div>
+        <div class="topbar-side right">
+            <div class="target-pill" id="target-pill">do 1001</div>
+        </div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="scoreboard">
+        <div class="sb-header" id="sb-header"></div>
+        <div class="sb-totals" id="sb-totals"></div>
+        <div class="sb-bars"   id="sb-bars"></div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-card">
+        <!-- Zvao -->
+        <div class="caller-section">
+            <div class="input-lbl">Tko je zvao?</div>
+            <div class="caller-row" id="caller-row"></div>
+        </div>
+
+        <div class="input-section" id="score-inputs"></div>
+        
+        <div class="zvanja-section">
+            <div class="zvanja-header">Zvanja</div>
+            <div class="zvanja-row" id="zvanja-inputs"></div>
+        </div>
+        
+        <div class="action-row">
+            <button class="btn-add"  onclick="addScore()">Upiši ✓</button>
+            <button class="btn-undo" onclick="undoLast()">↩ Poništi</button>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-wrap" id="history-wrap"></div>
+
+    <div class="game-actions">
+        <button class="btn-end-game" onclick="endCurrentGame()">Završi igru</button>
+    </div>
+
+</div>
+
+<!-- Win overlay -->
+<div class="win-overlay" id="win-overlay">
+    <div class="win-card">
+        <span class="win-suit" id="win-suit">♠</span>
+        <div class="win-lbl">Pobjednik</div>
+        <div class="win-name" id="win-name"></div>
+        <div class="win-score" id="win-score"></div>
+        <button class="btn-new-game" onclick="newGame()">Nova igra</button>
+    </div>
+</div>
+
+<!-- Custom Confirm Overlay -->
+<div class="overlay" id="custom-confirm-overlay">
+    <div class="modal-card">
+        <div class="modal-title" id="custom-confirm-title">Potvrda</div>
+        <div class="modal-message" id="custom-confirm-msg"></div>
+        <div class="modal-actions">
+            <button class="btn-undo" style="margin:0; flex:1;" onclick="closeConfirm()" id="btn-confirm-no">Ne</button>
+            <button class="btn-primary" style="margin:0; flex:1;" onclick="handleConfirm()" id="btn-confirm-yes">Da</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── Global State ───────────────────────────────────────────
+let playerCount = 4;
+let playerNames  = [];
+let targetScore  = 1001;
+let totals       = [];
+let rounds       = []; // [{scores:[...], pads:[...]}]
+let playerOrder  = []; // Indices of players in calling order
+let callerTurnIdx = 0; // Current index in playerOrder
+let currentLang  = 'hr';
+
+// ─── Input State ───────────────────────────────────────────
+let currentCaller = null;
+let currentZvanja = []; 
+let confirmAction = null;
+
+const SUITS   = ['♠','♥','♦','♣'];
+const AVATARS = [
+    { suit: '♠', cls: 'avatar-r' },
+    { suit: '♥', cls: 'avatar-b' },
+    { suit: '♦', cls: 'avatar-g' },
+];
+
+const TRANSLATIONS = {
+    hr: {
+        qPlayers: "Koliko igrača?",
+        chooseFormat: "Odaberi format igre",
+        oneOnOne: "1 na 1",
+        threePlayers: "Troje",
+        pairs: "Parovi",
+        playerNames: "Imena igrača",
+        changeDefaults: "Možeš promijeniti zadane nazive",
+        back: "← Natrag",
+        continue: "Nastavi →",
+        toHowMany: "Do koliko se igra?",
+        targetSub: "Igra završava kad netko dosegne cilj",
+        enterNum: "✏️ Unesi broj",
+        confirm: "Potvrdi →",
+        whoCalled: "Tko je zvao?",
+        announcements: "Zvanja",
+        write: "Upiši ✓",
+        undo: "↩ Poništi",
+        newBlock: "Novi blok", // Reset current round scores, continue game
+        endGame: "Završi igru", // End current game, return to start
+        endGameConfirm: "Jeste li sigurni da želite završiti trenutnu igru i vratiti se na početak?",
+        winner: "Pobjednik",
+        newGame: "Nova igra",
+        points: "bodova",
+        orderPlayers: "Poredaj igrače",
+        firstCalled: "Prvi igrač na redu zove",
+        thisRoundCalled: "Ovu rundu zove",
+        resetConfirm: "Obrisati trenutni blok i krenuti ispočetka?",
+        selectCaller: "Molimo odaberite tko je zvao!",
+        confirmGoBack: "Jeste li sigurni da želite napustiti igru? Podaci će biti izgubljeni.",
+        confirmGoBackTitle: "Napusti igru?",
+        confirmTitle: "Potvrda",
+        yes: "Da",
+        no: "Ne",
+        defaults: { 2: ['Igrač 1', 'Igrač 2'], 3: ['Igrač 1', 'Igrač 2', 'Igrač 3'], 4: ['Mi', 'Vi'] }
+    },
+    en: {
+        qPlayers: "How many players?",
+        chooseFormat: "Select game format",
+        oneOnOne: "1 vs 1",
+        threePlayers: "Three",
+        pairs: "Pairs",
+        playerNames: "Player names",
+        changeDefaults: "You can change default names",
+        back: "← Back",
+        continue: "Continue →",
+        toHowMany: "Target score?",
+        targetSub: "The game ends when someone reaches the goal",
+        enterNum: "✏️ Custom score",
+        confirm: "Confirm →",
+        whoCalled: "Who called?",
+        announcements: "Announcements",
+        write: "Add ✓",
+        undo: "↩ Undo",
+        newBlock: "New Block", // Reset current round scores, continue game
+        endGame: "End Game", // End current game, return to start
+        endGameConfirm: "Are you sure you want to end the current game and return to the start?",
+        winner: "Winner",
+        newGame: "New Game",
+        points: "points",
+        orderPlayers: "Order players",
+        firstCalled: "First player calls",
+        thisRoundCalled: "This round is called by",
+        resetConfirm: "Reset the current block and start over?",
+        selectCaller: "Please select who called!",
+        confirmGoBack: "Are you sure you want to leave the game? Data will be lost.",
+        confirmGoBackTitle: "Leave game?",
+        confirmTitle: "Confirmation",
+        yes: "Yes",
+        no: "No",
+        defaults: { 2: ['Player 1', 'Player 2'], 3: ['Player 1', 'Player 2', 'Player 3'], 4: ['Us', 'Them'] }
+    }
+};
+
+function setLanguage(lang) {
+    currentLang = lang;
+    document.documentElement.lang = lang;
+    
+    // Update active class on buttons
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase() === lang);
+    });
+
+    // Update static text content
+    const t = TRANSLATIONS[lang];
+    document.querySelector('#screen-players .card-title').textContent = t.qPlayers;
+    document.querySelector('#screen-players .card-sub').textContent = t.chooseFormat;
+    document.querySelectorAll('.player-btn .lbl')[0].textContent = t.oneOnOne;
+    document.querySelectorAll('.player-btn .lbl')[1].textContent = t.threePlayers;
+    document.querySelectorAll('.player-btn .lbl')[2].textContent = t.pairs;
+
+    document.querySelector('#screen-names .card-title').textContent = t.playerNames;
+    document.querySelector('#screen-names .card-sub').textContent = t.changeDefaults;
+    document.querySelectorAll('.btn-back')[0].textContent = t.back;
+    document.querySelectorAll('.btn-primary')[0].textContent = t.continue;
+
+    document.querySelector('#screen-target .card-title').textContent = t.toHowMany;
+    document.querySelector('#screen-target .card-sub').textContent = t.targetSub;
+    document.querySelectorAll('.btn-back')[1].textContent = t.back;
+    document.querySelector('.custom-btn').textContent = t.enterNum;
+    document.querySelector('#custom-wrap .btn-primary').textContent = t.confirm;
+
+    // Game screen specific elements
+    document.querySelector('.input-lbl').textContent = t.whoCalled;
+    document.querySelector('.zvanja-header').textContent = t.announcements;
+    document.querySelector('.btn-add').textContent = t.write;
+    document.querySelector('.btn-undo').textContent = t.undo;
+    document.querySelector('.btn-end-game').textContent = t.endGame;
+    document.querySelectorAll('.btn-game-nav').forEach(btn => btn.textContent = t.back);
+    
+    // Confirm modal elements
+    document.getElementById('custom-confirm-title').textContent = t.confirmTitle; // Ensure this is updated for all confirms
+    document.getElementById('btn-confirm-yes').textContent = t.yes;
+    document.getElementById('btn-confirm-no').textContent = t.no;
+    // Win overlay elements
+    document.querySelector('.win-lbl').textContent = t.winner;
+    document.querySelector('.btn-new-game').textContent = t.newGame;
+}
+
+// ─── Screen helpers ───────────────────────────────────
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+}
+
+function goBack(targetId) {
+    showScreen(targetId);
+}
+
+// ─── Screen 1 ─────────────────────────────────────────
+function selectPlayers(n) {
+    playerCount = n;
+    buildNamesScreen();
+    showScreen('screen-names');
+    setTimeout(() => document.querySelector('#names-grid .name-input')?.focus(), 250);
+}
+
+// ─── Screen 2 ─────────────────────────────────────────
+function buildNamesScreen() {
+    const grid  = document.getElementById('names-grid');
+    const count = playerCount === 4 ? 2 : playerCount;
+    const defs  = TRANSLATIONS[currentLang].defaults[playerCount];
+    const avatars = AVATARS;
+    grid.innerHTML = '';
+
+    for (let i = 0; i < count; i++) {
+        const row = document.createElement('div');
+        row.className = 'name-row';
+        row.innerHTML = `
+            <div class="name-avatar ${avatars[i].cls}">${avatars[i].suit}</div>
+            <input class="name-input" id="name-${i}" type="text"
+                   value="${defs[i]}" placeholder="${defs[i]}">
+        `;
+        grid.appendChild(row);
+    }
+}
+
+function goToTarget() {
+    const count = playerCount === 4 ? 2 : playerCount;
+    const defs  = TRANSLATIONS[currentLang].defaults[playerCount];
+    playerNames = [];
+    for (let i = 0; i < count; i++) {
+        const v = document.getElementById(`name-${i}`).value.trim();
+        playerNames.push(v || defs[i]);
+    }
+    
+    if (playerCount === 3) {
+        buildOrderScreen();
+        showScreen('screen-order');
+    } else {
+        showScreen('screen-target');
+    }
+}
+
+// ─── Order Screen (3 players) ────────────────────────
+function buildOrderScreen() {
+    const list = document.getElementById('order-list');
+    list.innerHTML = '';
+    playerOrder = playerNames.map((_, i) => i);
+    renderOrder();
+}
+
+function renderOrder() {
+    const list = document.getElementById('order-list');
+    list.innerHTML = '';
+    const t = TRANSLATIONS[currentLang];
+    document.getElementById('order-title').textContent = t.orderPlayers;
+    document.getElementById('order-sub').textContent = t.firstCalled;
+
+    playerOrder.forEach((pIdx, i) => {
+        const row = document.createElement('div');
+        row.className = 'player-btn';
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.alignItems = 'center';
+        row.style.padding = '15px 20px';
+        if (i === 0) row.style.borderColor = 'var(--green)';
+        
+        row.innerHTML = `
+            <span style="font-weight:700">${playerNames[pIdx]}</span>
+            <div style="display:flex; gap:10px;">
+                <button class="z-btn" style="width:40px" onclick="moveOrder(${i}, -1)">↑</button>
+                <button class="z-btn" style="width:40px" onclick="moveOrder(${i}, 1)">↓</button>
+            </div>
+        `;
+        list.appendChild(row);
+    });
+}
+
+function moveOrder(idx, dir) {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= playerOrder.length) return;
+    const temp = playerOrder[idx];
+    playerOrder[idx] = playerOrder[newIdx];
+    playerOrder[newIdx] = temp;
+    renderOrder();
+}
+
+function confirmOrder() {
+    playerNames = playerOrder.map(idx => playerNames[idx]);
+    showScreen('screen-target');
+}
+
+// ─── Screen 3 ─────────────────────────────────────────
+function selectTarget(n) {
+    targetScore = n;
+    initGame();
+}
+
+function showCustomTarget() {
+    const wrap = document.getElementById('custom-wrap');
+    wrap.classList.add('show');
+    document.getElementById('custom-input').focus();
+}
+
+function confirmCustom() {
+    const v = parseInt(document.getElementById('custom-input').value);
+    if (v >= 10) { targetScore = v; initGame(); }
+    else document.getElementById('custom-input').style.borderColor = 'var(--red)';
+}
+
+// ─── Game init ────────────────────────────────────────
+function initGame() {
+    const count = pCount();
+    totals = new Array(count).fill(0);
+    rounds = [];
+    currentZvanja = new Array(count).fill(0);
+    callerTurnIdx = 0;
+    currentCaller = null;
+    
+    if (playerCount === 3) {
+        playerOrder = [0, 1, 2];
+    }
+
+    buildGameUI();
+    showScreen('screen-game');
+    resetInputsState();
+}
+
+function colClass() {
+    return pCount() === 3 ? 'col3' : 'col2';
+}
+
+function pCount() { return playerCount === 4 ? 2 : playerCount; }
+
+function buildGameUI() {
+    const n   = pCount();
+    const cc  = colClass();
+    const t   = TRANSLATIONS[currentLang];
+
+    document.getElementById('target-pill').textContent = `${currentLang === 'hr' ? 'do' : 'to'} ${targetScore}`;
+
+    // Header
+    const header = document.getElementById('sb-header');
+    header.style.gridTemplateColumns = n === 3 ? '1fr 1fr 1fr' : '1fr 1fr';
+    header.innerHTML = playerNames.map(nm =>
+        `<div class="sb-cell-head">${nm}</div>`
+    ).join('');
+
+    // Totals
+    const tots = document.getElementById('sb-totals');
+    tots.style.gridTemplateColumns = n === 3 ? '1fr 1fr 1fr' : '1fr 1fr';
+    tots.innerHTML = playerNames.map((_, i) =>
+        `<div class="sb-cell-total" id="total-${i}">0</div>`
+    ).join('');
+
+    // Bars
+    const bars = document.getElementById('sb-bars');
+    bars.style.gridTemplateColumns = n === 3 ? '1fr 1fr 1fr' : '1fr 1fr';
+    bars.innerHTML = playerNames.map((_, i) => `
+        <div class="bar-track">
+            <div class="bar-fill" id="bar-${i}"></div>
+        </div>
+    `).join('');
+    
+    // Caller setup
+    const callerRow = document.getElementById('caller-row');
+    callerRow.className = `caller-row ${cc}`;
+    callerRow.innerHTML = playerNames.map((nm, i) => `
+        <button class="caller-btn" id="caller-btn-${i}" onclick="setCaller(${i})">${nm}</button>
+    `).join('');
+
+    // Score inputs
+    buildInputs(n, cc);
+
+    if (playerCount === 3) {
+        setCaller(playerOrder[callerTurnIdx]);
+    }
+
+    // Zvanja setup
+    const zRow = document.getElementById('zvanja-inputs');
+    zRow.className = `zvanja-row ${cc}`;
+    zRow.innerHTML = playerNames.map((nm, i) => `
+        <div class="z-col">
+            <div class="z-val" id="z-val-${i}">0</div>
+            <div class="z-btn-grid">
+                <button class="z-btn" onclick="addZ(${i}, 20)">20</button>
+                <button class="z-btn" onclick="addZ(${i}, 50)">50</button>
+                <button class="z-btn z-stiglja" onclick="addZ(${i}, 90)">Štig</button>
+                <button class="z-btn" onclick="addZ(${i}, 100)">100</button>
+                <button class="z-btn" onclick="addZ(${i}, 150)">150</button>
+                <button class="z-btn" onclick="addZ(${i}, 200)">200</button>
+                <button class="z-btn z-clear" onclick="clearZ(${i})">${t.undo}</button>
+            </div>
+        </div>
+    `).join('');
+
+    // History
+    document.getElementById('history-wrap').innerHTML = '';
+}
+
+function buildInputs(n, cc) {
+    const wrap = document.getElementById('score-inputs');
+
+    if (playerCount === 2 || playerCount === 4) {
+        const pN = pCount();
+        wrap.innerHTML = `
+            <div class="inputs-row col2">
+                ${playerNames.map((nm, i) => `
+                    <div>
+                        <div class="input-lbl">${nm} (karte)</div>
+                        <input class="score-input" id="input-${i}" type="number"
+                               placeholder="0" min="0" max="162" inputmode="numeric"
+                               ${playerCount === 4 ? `oninput="autoCalc(${i})"` : ''}>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else {
+        const callerIdx = playerOrder[callerTurnIdx];
+        const t = TRANSLATIONS[currentLang];
+        document.querySelector('.caller-section .input-lbl').textContent = t.thisRoundCalled;
+        
+        wrap.innerHTML = `
+            <div class="inputs-row col3">
+                ${playerNames.map((nm, i) => `
+                    <div>
+                        <div class="input-lbl">${nm} (karte)</div>
+                        <input class="score-input" id="input-${i}" type="number"
+                               placeholder="0" min="0" max="162" inputmode="numeric"
+                               ${i === callerIdx ? 'readonly' : `oninput="autoCalc3(${callerIdx})"`}>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+
+function autoCalc3(callerIdx) {
+    const n = 3;
+    let sumOthers = 0;
+    for (let i = 0; i < n; i++) {
+        if (i !== callerIdx) {
+            sumOthers += parseInt(document.getElementById(`input-${i}`).value) || 0;
+        }
+    }
+    const callerInput = document.getElementById(`input-${callerIdx}`);
+    if (sumOthers <= 162) {
+        callerInput.value = 162 - sumOthers;
+    } else {
+        callerInput.value = 0;
+    }
+}
+
+// ─── Auto-calculation for 4 players (pairs) ──────────────────────────
+function autoCalc(changedInputIdx) {
+    if (playerCount !== 4) return; // This function is only for 4-player games (pairs)
+
+    const val = parseInt(document.getElementById(`input-${changedInputIdx}`).value);
+    const otherInputIdx = changedInputIdx === 0 ? 1 : 0; // Assuming input-0 and input-1 are the two teams
+
+    if (!isNaN(val) && val >= 0 && val <= 162) {
+        const otherInputEl = document.getElementById(`input-${otherInputIdx}`);
+        otherInputEl.value = 162 - val;
+    }
+}
+
+
+// ─── Input Logic ──────────────────────────────────────
+function setCaller(idx) {
+    currentCaller = idx;
+    const n = pCount();
+    for (let i = 0; i < n; i++) {
+        const btn = document.getElementById(`caller-btn-${i}`);
+        if (!btn) continue;
+        if (i === idx) {
+            btn.classList.add('active');
+            btn.classList.remove('disabled');
+            btn.disabled = false;
+        } else {
+            btn.classList.remove('active');
+            if (playerCount === 3) {
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('disabled');
+                btn.disabled = false;
+            }
+        }
+    }
+}
+
+function addZ(idx, val) {
+    currentZvanja[idx] += val;
+    document.getElementById(`z-val-${idx}`).textContent = currentZvanja[idx];
+}
+
+function clearZ(idx) {
+    currentZvanja[idx] = 0;
+    document.getElementById(`z-val-${idx}`).textContent = '0';
+}
+
+// ─── Add score & Logika Pada ──────────────────────────
+function addScore() {
+    const n = pCount();
+    if (currentCaller === null) {
+        alert(TRANSLATIONS[currentLang].selectCaller);
+        return;
+    }
+
+    const cardPts = [];
+    for (let i = 0; i < n; i++) {
+        cardPts.push(parseInt(document.getElementById(`input-${i}`).value)  || 0);
+    }
+
+    if (cardPts.every(v => v === 0) && currentZvanja.every(v => v === 0)) return;
+
+    // Logika pada
+    let sumCards = cardPts.reduce((a, b) => a + b, 0);
+
+    if (sumCards > 162) {
+        alert(currentLang === 'hr' ? 'Ukupan zbroj karata ne smije biti veći od 162!' : 'Total card sum cannot exceed 162!');
+        return;
+    }
+
+    let sumZvanja = currentZvanja.reduce((a, b) => a + b, 0);
+    
+    let pad = false;
+    let callerTotal = cardPts[currentCaller] + currentZvanja[currentCaller];
+    
+    let othersTotal = 0;
+    for (let i = 0; i < n; i++) {
+        if (i !== currentCaller) {
+            othersTotal += cardPts[i] + currentZvanja[i];
+        }
+    }
+
+    if (callerTotal <= othersTotal) {
+        pad = true;
+    }
+
+    const roundScores = new Array(n).fill(0);
+    const padStatus = new Array(n).fill(false);
+
+    if (pad) {
+        padStatus[currentCaller] = true;
+        for(let i = 0; i < n; i++) {
+            if (i === currentCaller) {
+                roundScores[i] = 0;
+            } else if (playerCount === 3) {
+                // U troje kad zvao padne, ostalima piše njihov zbroj (karte + zvanja)
+                roundScores[i] = cardPts[i] + currentZvanja[i];
+            } else {
+                let totalVal = sumCards + sumZvanja;
+                roundScores[i] = n === 2 ? totalVal : Math.floor(totalVal / (n - 1));
+            }
+        }
+    } else {
+        for(let i = 0; i < n; i++) {
+            roundScores[i] = cardPts[i] + currentZvanja[i];
+        }
+    }
+
+    rounds.push({ scores: roundScores, pads: padStatus });
+
+    for (let i = 0; i < n; i++) totals[i] += roundScores[i];
+
+    updateScoreboard();
+    prependHistoryRow(roundScores, padStatus);
+    resetInputsState();
+    
+    if (playerCount === 3) {
+        callerTurnIdx = (callerTurnIdx + 1) % 3;
+        buildInputs(3, 'col3');
+        setCaller(playerOrder[callerTurnIdx]);
+    }
+
+    checkWinner();
+}
+
+function resetInputsState() {
+    const n = pCount();
+    if (playerCount !== 3) currentCaller = null;
+    currentZvanja = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) {
+        const inp = document.getElementById(`input-${i}`);
+        if (inp) inp.value = '';
+        const zv = document.getElementById(`z-val-${i}`);
+        if (zv) zv.textContent = '0';
+        
+        if (playerCount !== 3) {
+            const btn = document.getElementById(`caller-btn-${i}`);
+            if (btn) btn.classList.remove('active');
+        }
+    }
+}
+
+// ─── Undo ─────────────────────────────────────────────
+function undoLast() {
+    if (rounds.length === 0) return;
+    const last = rounds.pop();
+    const n = pCount();
+    for (let i = 0; i < n; i++) totals[i] -= last.scores[i];
+    updateScoreboard();
+    const hw = document.getElementById('history-wrap');
+    if (hw.firstChild) hw.removeChild(hw.firstChild);
+}
+
+// ─── Scoreboard update ────────────────────────────────
+function updateScoreboard() {
+    const n = pCount();
+    const max = Math.max(...totals);
+
+    for (let i = 0; i < n; i++) {
+        const totalDiv = document.getElementById(`total-${i}`);
+        totalDiv.textContent = totals[i];
+        totalDiv.className = 'sb-cell-total'; // Reset classes
+        if (n === 2 && totals[i] > 0) {
+            if (totals[i] === max) totalDiv.classList.add('winning');
+            else                   totalDiv.classList.add('losing');
+        }
+        const pct = Math.min((totals[i] / targetScore) * 100, 100);
+        document.getElementById(`bar-${i}`).style.width = `${pct}%`;
+    }
+}
+
+// ─── History ──────────────────────────────────────────
+function prependHistoryRow(scores, pads) {
+    const hw  = document.getElementById('history-wrap');
+    const cc  = colClass();
+    const row = document.createElement('div');
+    row.className = `hist-row ${cc}`;
+    
+    row.innerHTML = scores.map((s, i) => `
+        <div class="hist-cell">
+            ${s > 0 ? '+' : ''}${s}
+            ${pads[i] ? '<span class="hist-pad">Pad</span>' : ''}
+        </div>
+    `).join('');
+    
+    hw.prepend(row);
+}
+
+// ─── Win check ────────────────────────────────────────
+function checkWinner() {
+    const n = pCount();
+    for (let i = 0; i < n; i++) {
+        if (totals[i] >= targetScore) {
+            showWinner(i);
+            return;
+        }
+    }
+}
+
+function showWinner(idx) {
+    document.getElementById('win-suit').textContent  = SUITS[idx % SUITS.length];
+    document.getElementById('win-name').textContent  = playerNames[idx];
+    document.getElementById('win-score').textContent = `${totals[idx]} ${TRANSLATIONS[currentLang].points}`;
+    document.getElementById('win-overlay').classList.add('show');
+}
+
+function endGame() {
+    document.getElementById('win-overlay').classList.remove('show');
+    document.getElementById('custom-wrap').classList.remove('show');
+    document.getElementById('custom-input').value = '';
+
+    // Resetiranje stanja igre
+    playerCount = 4;
+    playerNames = [];
+    targetScore = 1001;
+    totals = [];
+    rounds = [];
+    currentCaller = null;
+    currentZvanja = [];
+
+    showScreen('screen-players');
+    setLanguage(currentLang);
+}
+
+function newGame() {
+    endGame();
+}
+
+function showCustomConfirm(msg, action, title) {
+    document.getElementById('custom-confirm-msg').textContent = msg;
+    document.getElementById('custom-confirm-title').textContent = title || TRANSLATIONS[currentLang].confirmTitle;
+    confirmAction = action;
+    document.getElementById('custom-confirm-overlay').classList.add('show');
+}
+
+function closeConfirm() {
+    document.getElementById('custom-confirm-overlay').classList.remove('show');
+    confirmAction = null;
+}
+
+function handleConfirm() {
+    const action = confirmAction;
+    closeConfirm();
+    if (action) action();
+}
+
+function endCurrentGame() {
+    showCustomConfirm(TRANSLATIONS[currentLang].endGameConfirm, endGame, TRANSLATIONS[currentLang].confirmTitle);
+}
+
+function resetGame() {
+    showCustomConfirm(TRANSLATIONS[currentLang].resetConfirm, initGame, TRANSLATIONS[currentLang].confirmTitle);
+}
+
+function confirmGoBackFromGame() {
+    console.log("confirmGoBackFromGame called.");
+    showCustomConfirm(
+        TRANSLATIONS[currentLang].confirmGoBack,
+        () => goBack('screen-names'),
+        TRANSLATIONS[currentLang].confirmGoBackTitle
+    );
+}
+</script>
+</body>
+</html>
